@@ -22,15 +22,15 @@ class Test(models.Model):
 class EstatePropertOffer(models.Model):
     _name = 'estate.property.offer'
     _description = 'Estate Property Offer'
-    _order = 'price desc'
 
+    _order = 'price desc'
+    
     price = fields.Float()
     status = fields.Selection([('accepted', 'Accepted'),('refuse', 'Refuse')])
     partner_id = fields.Many2one('res.partner')
     property_id = fields.Many2one('estate.property')
-    property_type_id = fields.Many2one(related='property_id.property_type_id', store=True)
+    property_type_id = fields.Many2one(related='property_id.property_type_id',store=True)
 
-    
     def action_accepted(self):
         for record in self:
             record.status = 'accepted'
@@ -41,6 +41,8 @@ class EstatePropertOffer(models.Model):
     def action_refused(self):
         for record in self:
             record.status = 'refuse'
+    
+   
 
         
         
@@ -53,10 +55,11 @@ class EstatePropertyTag(models.Model):
 
     _sql_constraints = [('unique_property_tag_name', 'unique(name)', 'Tag cannot be duplicated')]
 
-
-
+    
     name = fields.Char()
     color = fields.Integer()
+    
+    
 
 
 class EstatePropertyType(models.Model):
@@ -65,16 +68,21 @@ class EstatePropertyType(models.Model):
 
     _sql_constraints = [('unique_property_type_name', 'unique(name)', 'Type cannot be duplicated')]
 
+    _order = "id desc"
+
     name = fields.Char()
 
+
     property_ids = fields.One2many('estate.property','property_type_id')
+
     offer_ids = fields.One2many('estate.property.offer','property_type_id')
+
     offer_count = fields.Integer(compute='_compute_offer_count')
 
     @api.depends('offer_ids')
     def _compute_offer_count(self):
-    	for record in self:
-    		record.offer_count = len(record.offer_ids)
+        for record in self:
+            record.offer_count = len(record.offer_ids)
 
 
 class EstateProperty(models.Model):
@@ -124,6 +132,7 @@ class EstateProperty(models.Model):
     validity = fields.Integer(default=7)
     date_deadline = fields.Date(compute="_compute_date_deadline")
     state = fields.Selection([('new','New'),('sold','Sold'),('cancel','Cancel')],default='new')
+    currency_id = fields.Many2one('res.currency', default=lambda self: self.env.company.currency_id)
 
     @api.onchange('garden')
     def _onchange_garden(self):
@@ -184,5 +193,14 @@ class EstateProperty(models.Model):
             if record.living_area < record.garden_area:
                 raise ValidationError("Garden cannot be bigger than living area")        
 
+    
+    def open_offer(self):
+        return {
 
+            "type" : "ir.actions.act_window",
+            "res_model" : "estate.property.offer",
+            "views":[[False,'tree']],
+            "target":"new",
+            "domain":[('property_id','=',self.id)]
+        }
    
